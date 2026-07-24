@@ -24,7 +24,7 @@ function loadNsfwMedia() {
 function buildListMessage(title, body, buttonText, rows) {
     return {
         text: body,
-        footer: 'Pilih salah satu untuk mengirim media NSFW langsung.',
+        footer: 'Pilih salah satu opsi di bawah ini untuk mengirim konten 18+ secara aman.',
         title,
         buttonText,
         sections: [{
@@ -95,8 +95,9 @@ module.exports = {
                 { title: 'Gambar NSFW', rowId: '.nsfw image', description: 'Kirim gambar dewasa dari daftar internal' },
                 { title: 'Video NSFW', rowId: '.nsfw video', description: 'Kirim video dewasa dari daftar internal' },
                 { title: 'Teks NSFW', rowId: '.nsfw teks', description: 'Minta teks dewasa AI sesuai keterangan' },
+                { title: 'Mode acak', rowId: '.nsfw random', description: 'Kirim media acak dari daftar internal' },
             ];
-            return sock.sendMessage(jid, buildListMessage('Pilih jenis NSFW', 'Silakan pilih gambar, video, atau teks.', 'Pilih NSFW', rows), { quoted: msg });
+            return sock.sendMessage(jid, buildListMessage('Pilih jenis NSFW', 'Silakan pilih gambar, video, teks, atau mode acak.', 'Pilih NSFW', rows), { quoted: msg });
         }
 
         const parts = trimmedText.split(/\s+/);
@@ -143,6 +144,15 @@ module.exports = {
                 return sock.sendMessage(jid, { text: '⚠️ Nomor video tidak valid. Gunakan .nsfw video lalu pilih dari daftar.' }, { quoted: msg });
             }
             return sendMediaByLink(videoLinks[index]);
+        }
+
+        if (['random', 'acak'].includes(commandType)) {
+            const combined = [...imageLinks, ...videoLinks];
+            if (!combined.length) {
+                return sock.sendMessage(jid, { text: '⚠️ Belum ada media NSFW yang tersimpan. Tambahkan dulu ke file config/nsfw.json.' }, { quoted: msg });
+            }
+            const pick = combined[Math.floor(Math.random() * combined.length)];
+            return sendMediaByLink(pick);
         }
 
         let aiRequestText = trimmedText;

@@ -29,9 +29,10 @@ Bot ini mendukung AI chat, image generation, premium payment, downloader multi-p
 ## ⚠️ Catatan Penting
 
 1. `OWNER_NUMBER` harus dalam format internasional tanpa `+` atau spasi, misal `6281234567890`.
-2. `AI_API_KEY` wajib diisi di `.env`.
-3. `assets/qris.jpg` harus berisi QRIS kamu sendiri.
-4. `SESSION_METHOD` bisa diatur ke `pairing` atau `qr` sesuai kebutuhan Pterodactyl.
+2. `BOT_NUMBER` opsional, tetapi sangat disarankan untuk pairing karena bot bisa memakai nomor ini langsung tanpa prompt manual.
+3. `AI_API_KEY` wajib diisi di `.env`.
+4. `assets/qris.jpg` harus berisi QRIS kamu sendiri.
+5. `SESSION_METHOD` bisa diatur ke `pairing` atau `qr` sesuai kebutuhan Pterodactyl.
 5. Bot menggunakan Baileys v7 (`7.0.0-rc13`) agar lebih kompatibel dengan panel hosting.
 6. Downloader menggunakan API pihak ketiga gratis, jadi bisa berubah sewaktu-waktu.
 7. Sticker engine custom sudah dibuat untuk menghindari dependency rentan.
@@ -67,6 +68,7 @@ Buat file `.env` di dalam folder `TroxzyMD` dan isikan minimal:
 
 ```env
 OWNER_NUMBER=6281234567890
+BOT_NUMBER=6281234567890
 AI_API_KEY=your_api_key_here
 SESSION_METHOD=pairing
 MIDTRANS_SERVER_KEY=
@@ -175,6 +177,7 @@ Contoh konfigurasi minimal:
 
 ```env
 OWNER_NUMBER=6281234567890
+BOT_NUMBER=6281234567890
 AI_API_KEY=your_api_key_here
 SESSION_METHOD=pairing
 MIDTRANS_SERVER_KEY=

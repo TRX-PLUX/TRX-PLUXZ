@@ -28,8 +28,7 @@ Gunakan:
             if (!keys.length) {
                 return sock.sendMessage(jid, { text: '📄 Belum ada template prompt AI. Tambah dengan *.prompt add <nama> <isi prompt>*.' }, { quoted: msg });
             }
-            let listText = '📄 *Daftar Prompt AI Kamu:*
-';
+            let listText = '📄 *Daftar Prompt AI Kamu:*\n';
             for (const key of keys) {
                 listText += `▸ *${key}*\n`;
             }

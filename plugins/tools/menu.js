@@ -4,29 +4,29 @@ const moment = require('moment-timezone');
 const navSession = require('../../lib/navSessionManager');
 
 const MENU_SESSION_TTL = 3 * 60 * 1000;
+const POLL_MENU_TTL = 3 * 60 * 1000;
 
 const CATEGORY_ICONS = {
     main: '📋', ai: '🤖', downloader: '📥', converter: '🔄',
     group: '👥', owner: '👑', tools: '🛠️', fun: '🎉',
-    sticker: '🖼️', payment: '💳', website: '🌐', rpg: '⚔️', economy: '💰'
+    sticker: '🖼️', payment: '💳', website: '🌐', rpg: '⚔️', economy: '💰', media: '🎞️'
 };
 
 const CATEGORY_LABELS = {
     main: 'Menu Utama', ai: 'AI & Chatbot', downloader: 'Downloader', converter: 'Converter Media',
     group: 'Manajemen Grup', owner: 'Owner Only', tools: 'Tools & Utilitas', fun: 'Game & Hiburan',
     sticker: 'Sticker Maker', payment: 'Premium & Payment', website: 'Website Generator',
-    rpg: 'RPG & Kerja', economy: 'Ekonomi & Saldo'
+    rpg: 'RPG & Kerja', economy: 'Ekonomi & Saldo', media: 'Media & Editing'
 };
 
-// Command paling sering dipakai per kategori, ditampilkan di .menu ringkas.
-// Kategori/command di luar daftar ini hanya muncul lewat .allmenu.
 const HIGHLIGHT_COMMANDS = {
-    ai: ['ai', 'imagine', 'tts', 'persona'],
-    downloader: ['tiktok', 'youtube', 'instagram'],
-    tools: ['profile', 'qrcode', 'calc'],
-    sticker: ['sticker'],
-    economy: ['daily', 'tukarlimit'],
-    fun: ['suit', 'tebakangka'],
+    ai: ['ai', 'imagine', 'tts', 'persona', 'nsfw', 'prompt'],
+    downloader: ['tiktok', 'youtube', 'instagram', 'twitter', 'facebook'],
+    tools: ['profile', 'qrcode', 'calc', 'removebg', 'upscale', 'enhancevideo', 'translate'],
+    sticker: ['sticker', 'stickerpack'],
+    economy: ['daily', 'balance', 'transfer', 'shop', 'leaderboard'],
+    fun: ['suit', 'tebakangka', 'mathquiz', 'quotes', 'slots', 'jodoh'],
+    group: ['groupinfo', 'setwelcome', 'link', 'lockgroup', 'hidetag'],
 };
 
 function buildHeader(user, allPlugins, isOwner = false) {
@@ -47,10 +47,58 @@ function buildHeader(user, allPlugins, isOwner = false) {
     return text;
 }
 
-/**
- * Menu kategori (.menu) — menampilkan daftar kategori dan jumlah command per kategori.
- * Balas dengan angka untuk melihat semua command di kategori terpilih.
- */
+function buildGroupSummaryText(grouped) {
+    const featured = [];
+
+    Object.entries(HIGHLIGHT_COMMANDS).forEach(([cat, cmds]) => {
+        const categoryPlugins = grouped[cat] || [];
+        if (!categoryPlugins.length) return;
+        const matched = categoryPlugins.filter(p => cmds.some(cmd => p.command.includes(cmd)));
+        if (matched.length) {
+            const names = matched.slice(0, 3).map(p => `.${p.command[0]}`).join(', ');
+            featured.push(`• ${CATEGORY_LABELS[cat] || cat}: ${names}`);
+        }
+    });
+
+    return featured.length ? `✨ Fitur unggulan:\n${featured.join('\n')}` : '';
+}
+
+async function sendPollMenu(sock, jid, msg, user, allPlugins, isOwner) {
+    const grouped = {};
+    for (const plugin of allPlugins) {
+        const cat = plugin._category || 'lainnya';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(plugin);
+    }
+
+    const categories = Object.keys(grouped).slice(0, 10);
+    const options = categories.map((cat) => {
+        const icon = CATEGORY_ICONS[cat] || '📁';
+        const label = CATEGORY_LABELS[cat] || cat.toUpperCase();
+        return `${icon} ${label}`;
+    });
+
+    const pollName = '🧭 Menu TRX-BTT • Pilih kategori';
+    const pollText = 'Pilih kategori yang ingin kamu lihat.\n\n✨ Menu ini lebih modern dan interaktif.';
+    const fullText = `${buildHeader(user, allPlugins, isOwner)}${pollText}`;
+
+    try {
+        await sock.sendMessage(jid, {
+            text: fullText,
+            poll: {
+                name: pollName,
+                values: options,
+                selectableCount: 1,
+            },
+        }, { quoted: msg });
+    } catch (err) {
+        console.warn('[MENU] Poll tidak didukung, fallback ke teks biasa:', err.message);
+        await sock.sendMessage(jid, { text: fullText }, { quoted: msg });
+    }
+
+    return { categories, grouped };
+}
+
 function buildCategoryMenuText(user, allPlugins, isOwner) {
     const grouped = {};
     for (const plugin of allPlugins) {
@@ -61,8 +109,14 @@ function buildCategoryMenuText(user, allPlugins, isOwner) {
 
     const categories = Object.keys(grouped);
     let text = buildHeader(user, allPlugins, isOwner);
-    text += `🗂️ *MENU KATEGORI*\n\n`;
+    text += `🗂️ *MENU UTAMA TRX-BTT*\n\n`;
 
+    const summary = buildGroupSummaryText(grouped);
+    if (summary) {
+        text += `${summary}\n\n`;
+    }
+
+    text += `📌 Pilih kategori berikut untuk melihat fitur yang tersedia:\n`;
     categories.forEach((cat, i) => {
         const icon = CATEGORY_ICONS[cat] || '📁';
         const label = CATEGORY_LABELS[cat] || cat.toUpperCase();
@@ -71,15 +125,12 @@ function buildCategoryMenuText(user, allPlugins, isOwner) {
 
     text += `\n_💬 Balas dengan angka 1-${categories.length} untuk lihat semua command di kategori ini._\n`;
     text += `_Sesi menu berlaku selama 3 menit._\n\n`;
-    text += `_Ketik ${config.prefix[0]}allmenu untuk daftar lengkap semua command._`;
+    text += `_Ketik ${config.prefix[0]}allmenu untuk daftar lengkap semua command._\n`;
+    text += `_Ketik ${config.prefix[0]}fitur untuk lihat fitur unggulan yang tersedia._`;
 
     return { text, categories, grouped };
 }
 
-/**
- * Menu LENGKAP (.allmenu) — sistem interaktif bertingkat: daftar semua
- * kategori bernomor, reply angka untuk lihat SEMUA command di kategori itu.
- */
 function buildAllMenuText(user, allPlugins, isOwner) {
     const grouped = {};
     for (const plugin of allPlugins) {
@@ -89,7 +140,7 @@ function buildAllMenuText(user, allPlugins, isOwner) {
     }
 
     let text = buildHeader(user, allPlugins, isOwner);
-    text += `📚 *SEMUA MENU*\n\n`;
+    text += `📚 *SEMUA MENU TRX-BTT*\n\n`;
 
     Object.entries(grouped).forEach(([cat, plugins]) => {
         const icon = CATEGORY_ICONS[cat] || '📁';
@@ -99,8 +150,7 @@ function buildAllMenuText(user, allPlugins, isOwner) {
             const badge = p.premium ? ' 💎' : '';
             const ownerBadge = p.ownerOnly ? ' 👑' : '';
             const aliasText = p.command.length > 1 ? ` _(alias: ${p.command.slice(1).join(', ')})_` : '';
-            const description = p.description ? `
-   ↳ ${p.description}` : '';
+            const description = p.description ? `\n   ↳ ${p.description}` : '';
             text += `▸ ${config.prefix[0]}${p.command[0]}${badge}${ownerBadge}${aliasText}${description}\n`;
         });
         text += `\n`;
@@ -177,6 +227,7 @@ module.exports = {
         });
 
         await sock.sendMessage(jid, { text }, { quoted: msg });
+        await sendPollMenu(sock, jid, msg, user, allPlugins, isOwner);
     },
     _handleMenuNavigation: handleMenuNavigation,
     _buildAllMenuText: buildAllMenuText,

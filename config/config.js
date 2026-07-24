@@ -5,6 +5,7 @@ module.exports = {
     botName: process.env.BOT_NAME || 'TroxzyMD',
     ownerName: process.env.OWNER_NAME || 'Troxzy',
     ownerNumber: (process.env.OWNER_NUMBER || '62xxx').replace(/\D/g, ''),
+    botNumber: (process.env.BOT_NUMBER || '').replace(/\D/g, ''),
     telegramOwner: process.env.TELEGRAM_OWNER || 't.me/SoloBanNoTrash',
     // Link channel WhatsApp owner. WAJIB diisi manual sebelum deploy —
     // ganti dengan link channel asli, format: https://whatsapp.com/channel/xxxxx
