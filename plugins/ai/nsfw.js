@@ -113,7 +113,7 @@ module.exports = {
                 const rows = imageLinks.map((link, index) => ({
                     title: `Gambar ${index + 1}`,
                     rowId: `.nsfw image ${index + 1}`,
-                    description: link,
+                    description: 'Kirim gambar NSFW langsung',
                 }));
                 return sock.sendMessage(jid, buildListMessage('Pilih gambar NSFW', 'Pilih salah satu gambar NSFW untuk dikirim langsung.', 'Pilih gambar', rows), { quoted: msg });
             }
@@ -134,7 +134,7 @@ module.exports = {
                 const rows = videoLinks.map((link, index) => ({
                     title: `Video ${index + 1}`,
                     rowId: `.nsfw video ${index + 1}`,
-                    description: link,
+                    description: 'Kirim video NSFW langsung',
                 }));
                 return sock.sendMessage(jid, buildListMessage('Pilih video NSFW', 'Pilih salah satu video NSFW untuk dikirim langsung.', 'Pilih video', rows), { quoted: msg });
             }
