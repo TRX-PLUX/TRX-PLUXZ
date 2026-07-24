@@ -1,0 +1,12 @@
+{
+  "images": [
+    "https://example.com/nsfw-image-1.jpg",
+    "https://example.com/nsfw-image-2.png",
+    "https://example.com/nsfw-image-3.webp"
+  ],
+  "videos": [
+    "https://example.com/nsfw-video-1.mp4",
+    "https://example.com/nsfw-video-2.webm",
+    "https://example.com/nsfw-video-3.mov"
+  ]
+}
