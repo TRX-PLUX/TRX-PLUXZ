@@ -29,15 +29,18 @@ const HIGHLIGHT_COMMANDS = {
     fun: ['suit', 'tebakangka'],
 };
 
-function buildHeader(user, allPlugins) {
+function buildHeader(user, allPlugins, isOwner = false) {
     const now = moment().tz('Asia/Jakarta').format('dddd, DD MMMM YYYY - HH:mm:ss');
     const totalCommands = allPlugins.reduce((sum, p) => sum + p.command.length, 0);
     const isPremium = userModel.isPremiumActive(user);
 
+    const statusLabel = isOwner ? 'Owner / Pemilik' : (isPremium ? 'Premium ✨' : 'Free');
+    const limitLabel = isOwner ? 'Unlimited' : user.dailyLimit;
+
     let text = `╭─❍❁『 *${config.botName}* 』❁❍\n`;
     text += `│ 👤 User      : ${user.name || 'Belum diatur'}\n`;
-    text += `│ 💎 Status    : ${isPremium ? 'Premium ✨' : 'Free'}\n`;
-    text += `│ ⚡ Limit     : ${user.dailyLimit}\n`;
+    text += `│ 🏷️ Status    : ${statusLabel}\n`;
+    text += `│ ⚡ Limit     : ${limitLabel}\n`;
     text += `│ 🕐 Waktu     : ${now}\n`;
     text += `│ 📦 Total Cmd : ${totalCommands}+ command\n`;
     text += `╰────────────────\n\n`;
@@ -45,48 +48,10 @@ function buildHeader(user, allPlugins) {
 }
 
 /**
- * Menu RINGKAS (.menu) — hanya menampilkan command populer per kategori,
- * langsung dalam 1 pesan tanpa perlu navigasi angka. Cocok untuk pemakaian
- * cepat sehari-hari. Untuk daftar LENGKAP semua command, arahkan ke .allmenu.
+ * Menu kategori (.menu) — menampilkan daftar kategori dan jumlah command per kategori.
+ * Balas dengan angka untuk melihat semua command di kategori terpilih.
  */
-function buildQuickMenuText(user, allPlugins) {
-    const grouped = {};
-    for (const plugin of allPlugins) {
-        const cat = plugin._category || 'lainnya';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(plugin);
-    }
-
-    let text = buildHeader(user, allPlugins);
-    text += `⭐ *MENU CEPAT* (command paling sering dipakai)\n\n`;
-
-    for (const [cat, commandNames] of Object.entries(HIGHLIGHT_COMMANDS)) {
-        const plugins = grouped[cat] || [];
-        const icon = CATEGORY_ICONS[cat] || '📁';
-        const label = CATEGORY_LABELS[cat] || cat.toUpperCase();
-
-        const matched = plugins.filter(p => commandNames.includes(p.command[0]));
-        if (matched.length === 0) continue;
-
-        text += `${icon} *${label}*\n`;
-        for (const p of matched) {
-            const badge = p.premium ? ' 💎' : '';
-            text += `▸ ${config.prefix[0]}${p.command[0]}${badge}\n`;
-        }
-        text += `\n`;
-    }
-
-    text += `_📋 Ini cuma sebagian — ketik *${config.prefix[0]}allmenu* untuk lihat SEMUA command per kategori._\n`;
-    text += `_Powered by ${config.ownerName} | ${config.telegramOwner}_`;
-
-    return text;
-}
-
-/**
- * Menu LENGKAP (.allmenu) — sistem interaktif bertingkat: daftar semua
- * kategori bernomor, reply angka untuk lihat SEMUA command di kategori itu.
- */
-function buildFullCategoryListText(user, allPlugins) {
+function buildCategoryMenuText(user, allPlugins, isOwner) {
     const grouped = {};
     for (const plugin of allPlugins) {
         const cat = plugin._category || 'lainnya';
@@ -95,8 +60,8 @@ function buildFullCategoryListText(user, allPlugins) {
     }
 
     const categories = Object.keys(grouped);
-    let text = buildHeader(user, allPlugins);
-    text += `🗂️ *SEMUA KATEGORI* (reply nomornya di chat ini)\n\n`;
+    let text = buildHeader(user, allPlugins, isOwner);
+    text += `🗂️ *MENU KATEGORI*\n\n`;
 
     categories.forEach((cat, i) => {
         const icon = CATEGORY_ICONS[cat] || '📁';
@@ -104,11 +69,47 @@ function buildFullCategoryListText(user, allPlugins) {
         text += `*${i + 1}.* ${icon} ${label} _(${grouped[cat].length} fitur)_\n`;
     });
 
-    text += `\n_💬 Balas dengan angka 1-${categories.length} untuk lihat SEMUA command di kategori itu._\n`;
-    text += `_Sesi menu ini aktif selama 3 menit._\n\n`;
-    text += `_Powered by ${config.ownerName} | ${config.telegramOwner}_`;
+    text += `\n_💬 Balas dengan angka 1-${categories.length} untuk lihat semua command di kategori ini._\n`;
+    text += `_Sesi menu berlaku selama 3 menit._\n\n`;
+    text += `_Ketik ${config.prefix[0]}allmenu untuk daftar lengkap semua command._`;
 
     return { text, categories, grouped };
+}
+
+/**
+ * Menu LENGKAP (.allmenu) — sistem interaktif bertingkat: daftar semua
+ * kategori bernomor, reply angka untuk lihat SEMUA command di kategori itu.
+ */
+function buildAllMenuText(user, allPlugins, isOwner) {
+    const grouped = {};
+    for (const plugin of allPlugins) {
+        const cat = plugin._category || 'lainnya';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(plugin);
+    }
+
+    let text = buildHeader(user, allPlugins, isOwner);
+    text += `📚 *SEMUA MENU*\n\n`;
+
+    Object.entries(grouped).forEach(([cat, plugins]) => {
+        const icon = CATEGORY_ICONS[cat] || '📁';
+        const label = CATEGORY_LABELS[cat] || cat.toUpperCase();
+        text += `${icon} *${label}*\n`;
+        plugins.forEach(p => {
+            const badge = p.premium ? ' 💎' : '';
+            const ownerBadge = p.ownerOnly ? ' 👑' : '';
+            const aliasText = p.command.length > 1 ? ` _(alias: ${p.command.slice(1).join(', ')})_` : '';
+            const description = p.description ? `
+   ↳ ${p.description}` : '';
+            text += `▸ ${config.prefix[0]}${p.command[0]}${badge}${ownerBadge}${aliasText}${description}\n`;
+        });
+        text += `\n`;
+    });
+
+    text += `_📌 Ini adalah daftar lengkap semua command di bot ini._\n`;
+    text += `_Created by ${config.ownerName}_`;
+
+    return text;
 }
 
 function buildCategoryDetailText(catKey, plugins) {
@@ -159,17 +160,24 @@ async function handleMenuNavigation(sock, msg, jid, body) {
 module.exports = {
     command: ['menu', 'help'],
     category: 'main',
-    description: 'Menampilkan menu cepat (command populer). Untuk semua command, pakai .allmenu',
+    description: 'Menampilkan kategori menu bot secara interaktif.',
     cooldown: 3,
     limitCost: 0,
-    execute: async (msg, { sock, jid, sender }) => {
+    execute: async (msg, { sock, jid, sender, isOwner }) => {
         const { getPlugins } = require('../../lib/connection');
         const { allPlugins } = getPlugins();
         const user = userModel.getUser(sender);
 
-        const text = buildQuickMenuText(user, allPlugins);
+        const { text, categories, grouped } = buildCategoryMenuText(user, allPlugins, isOwner);
+
+        navSession.registerSession('menu', jid, {
+            categories,
+            grouped,
+            expiresAt: Date.now() + MENU_SESSION_TTL,
+        });
+
         await sock.sendMessage(jid, { text }, { quoted: msg });
     },
     _handleMenuNavigation: handleMenuNavigation,
-    _buildFullCategoryListText: buildFullCategoryListText,
+    _buildAllMenuText: buildAllMenuText,
 };

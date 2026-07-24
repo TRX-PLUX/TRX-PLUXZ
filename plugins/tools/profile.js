@@ -6,12 +6,14 @@ module.exports = {
     category: 'tools',
     description: 'Menampilkan profil dan status akun kamu',
     limitCost: 0,
-    execute: async (msg, { sock, jid, sender }) => {
+    execute: async (msg, { sock, jid, sender, isOwner }) => {
         const user = userModel.getUser(sender);
         const isPremium = userModel.isPremiumActive(user);
 
         let premiumInfo = 'Free';
-        if (isPremium) {
+        if (isOwner) {
+            premiumInfo = 'Owner / Pemilik';
+        } else if (isPremium) {
             premiumInfo = user.premiumExpired === 0
                 ? 'Lifetime ✨'
                 : `Sampai ${moment(user.premiumExpired).format('DD MMM YYYY')} ✨`;
