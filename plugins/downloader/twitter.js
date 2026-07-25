@@ -20,10 +20,12 @@ module.exports = {
         }
 
         for (const item of result.media) {
-            if (item.includes('.mp4')) {
-                await sock.sendMessage(jid, { video: { url: item }, caption: result.text || '' }, { quoted: msg });
+            const url = typeof item === 'string' ? item : item.url;
+            const type = typeof item === 'string' ? (item.includes('.mp4') ? 'video' : 'image') : item.type;
+            if (type === 'video') {
+                await sock.sendMessage(jid, { video: { url }, caption: result.text || '' }, { quoted: msg });
             } else {
-                await sock.sendMessage(jid, { image: { url: item }, caption: result.text || '' }, { quoted: msg });
+                await sock.sendMessage(jid, { image: { url }, caption: result.text || '' }, { quoted: msg });
             }
         }
         await sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
